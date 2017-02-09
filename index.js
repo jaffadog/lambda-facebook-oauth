@@ -19,7 +19,7 @@ exports.handler = function(event, context) {
 
 	// you need to authorize this in you fb app config
 	var options = {
-		"redirect_uri" : "https://<YOUR_AWS_API_GATEWAY_URL_TO_THIS_FUNCTION>"
+		"redirect_uri" : "<YOUR_AWS_API_GATEWAY_URL_TO_THIS_FUNCTION>"
 	};
 
 	oauth2.getOAuthAccessToken(event.code, options, function(error, access_token, refresh_token, results) {
