@@ -1,0 +1,24 @@
+{
+  "name": "lambda-facebook-oauth",
+  "version": "1.0.0",
+  "description": "Intended for social login/registration purposes.",
+  "main": "index.js",
+  "dependencies": {
+    "oauth": "^0.9.15",
+    "https": "^1.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaffadog/lambda-facebook-oauth.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jaffadog/lambda-facebook-oauth/issues"
+  },
+  "homepage": "https://github.com/jaffadog/lambda-facebook-oauth#readme"
+}

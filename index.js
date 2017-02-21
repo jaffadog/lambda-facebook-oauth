@@ -1,66 +1,109 @@
+'use strict';
+
 var OAuth2 = require('oauth').OAuth2;
 var https = require('https');
 
 var oauth2 = new OAuth2(
-		"<YOUR_FACEBOOK_APP_ID>", 
-		"<YOUR_FACEBOOK_APP_SECRET>", 
-		"https://graph.facebook.com/", 
-		null, 
-		"v2.8/oauth/access_token");
+		process.env.appKey,
+		process.env.appSecret,
+	    "https://graph.facebook.com/", 
+	    null, 
+	    "v2.8/oauth/access_token");
 
-exports.handler = function(event, context) {
+var options = {
+        "redirect_uri" : process.env.redirectUrl
+    };
 
-	// if user declines to grant access
-	// error=access_denied&error_code=200&error_description=Permissions+error&error_reason=user_denied
-	if (event.error) {
-		console.log(event.error);
-		return context.fail(event.error);
-	}
+module.exports.auth = (event, context, callback) => {
+	
+	console.log('event',event);
 
-	// you need to authorize this in you fb app config
-	var options = {
-		"redirect_uri" : "<YOUR_AWS_API_GATEWAY_URL_TO_THIS_FUNCTION>"
-	};
+    /*
+	 * return error if query string has an error parameter. e.g. if user
+	 * declines to grant access.
+	 * error=access_denied&error_code=200&error_description=Permissions+error&error_reason=user_denied
+	 */	
+	if (event.queryStringParameters && event.queryStringParameters.error) {
+		console.log(event.queryStringParameters);
+		callback(null, getFailureResponse(event.queryStringParameters));
+    }
 
-	oauth2.getOAuthAccessToken(event.code, options, function(error, access_token, refresh_token, results) {
-
-		if (error) {
-			console.log(error);
-			return context.fail(error);
-		}
-
-		console.log('access_token = ', access_token);
-
-		// assumes you've requested email in your scope
-		var url = "https://graph.facebook.com/me?fields=id,name,email,picture&access_token=" + access_token;
-
-		https.get(url, function(res) {
-			console.log("Got response: " + res.statusCode);
-
-			var body = '';
-
-			res.on('data', function(chunk) {
-				body += chunk;
-			});
-
-			res.on('end', function() {
-				console.log(body);
-
-				body2 = JSON.parse(body);
-				console.log('id', body2.id);
-				console.log('name', body2.name);
-				console.log('email', body2.email);
-				console.log('url', body2.picture.data.url);
-
-				// FIXME: the above coud be used to register/create/update account
-
-				context.succeed(body);
-			});
-
-		}).on('error', function(e) {
-			console.log("Got error: ", e);
-			context.done(null, 'FAILURE');
+	// redirect to facebook if "code" is not provided in the query string
+	else if (!event.queryStringParameters || !event.queryStringParameters.code) {
+		callback(null, {
+            statusCode: 302,
+            headers: {
+            	'Location': 
+            		'https://www.facebook.com/v2.5/dialog/oauth'
+            		+ '?client_id=' + process.env.appKey
+            		+ '&redirect_uri=' + process.env.redirectUrl
+            		+ '&scope=email'
+            }
 		});
-
-	});
+	}
+	
+	// process request from facebook that has "code"
+	else {
+        oauth2.getOAuthAccessToken(
+        	event.queryStringParameters.code,
+            options,
+            function (error, access_token, refresh_token, results) {
+                
+                if (error) {
+    				console.log(error);
+    				callback(null, getFailureResponse(error));
+                }
+                
+                var url = "https://graph.facebook.com/me?fields=id,name,email,picture&access_token=" + access_token;
+    
+                https.get(url, function(res) {
+                    console.log("got response: " + res.statusCode);
+    
+                    var body = '';
+    
+                    res.on('data', function(chunk) {
+                        body += chunk;
+                    });
+    
+                    res.on('end', function() {
+                        var json = JSON.parse(body);
+                        console.log('id',json.id);
+                        console.log('name',json.name);
+                        console.log('email',json.email);
+                        console.log('url',json.picture.data.url);
+                        
+                        // you could save/update user details in a DB here...
+    
+				        console.log('success',data);
+						callback(null, getSuccessResponse(data, process.env.appUrl));
+                    });
+                }).on('error', function (error) {
+    				console.log(error);
+    				callback(null, getFailureResponse(error));
+                });
+            }
+        );
+	}
 };
+
+function getSuccessResponse(userId, url) {
+	// you could set a session cookie here (e.g. JWT token) and return it to the
+	// users browser...
+	var response = {
+		statusCode : 302,
+		headers : {
+			'Location' : url,
+		}
+	};
+	return response;
+}
+
+function getFailureResponse(error) {
+	// this pretty raw... were just going to return a crude error... you could
+	// do something pretty here
+	var response = {
+		statusCode : 400,
+		body : JSON.stringify(error),
+	};
+	return response;
+}

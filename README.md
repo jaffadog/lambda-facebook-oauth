@@ -1,11 +1,7 @@
 # lambda-facebook-oauth
 
-Intended for social login/registration purposes.
+Can be used for single-page-app social login/registration purposes.
 
-Your login button should generate a request to:
+Package includes [serverless](https://serverless.com/) configuration with will create the corresponding AWS APP GW config for you.
 
-    https://www.facebook.com/v2.5/dialog/oauth
-        ?client_id=<YOUR_FACEBOOK_APP_ID>
-        &redirect_uri=<YOUR_AWS_API_GATEWAY_URL_TO_THIS_FUNCTION>
-        &scope=email
-
+You need to configure your environment variable parameter values in serverless.yml.
